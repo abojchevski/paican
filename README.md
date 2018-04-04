@@ -23,7 +23,8 @@ Each of the dataset folders consists of the following files:
 * label_to_cluster.npy - a dictionary mapping a label (e.g. journal, party) to cluster index
 
 ## Demo
-See the notebook example.ipynb for a simple demo.
+* See the notebook example.ipynb for a simple demo.
+* Visit [our website](https://www.kdd.in.tum.de/paican) for an interactive plot that shows the inferred clustering on a subset of the Amazon dataset.
 
 ## Cite
 Please cite our paper if you use this code in your own work.
