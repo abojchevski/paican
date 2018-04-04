@@ -10,7 +10,7 @@ python setup.py install
 
 ## Requirements
 * tensorflow (>=1.4)
-1* sklearn (only for evaluation)
+* sklearn (only for evaluation)
 
 ## Data
 Each of the dataset folders consists of the following files:
