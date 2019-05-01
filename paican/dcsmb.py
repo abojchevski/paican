@@ -41,7 +41,8 @@ class DCSBM:
         self._m_step()  # call m_step to initialize
 
     def _init_spectral(self):
-        Dmh = sp.diags(np.power(self.A.sum(1).A1, -1 / 2))
+        deg = self.A.sum(1).A1
+        Dmh = sp.diags(np.power(deg, -1 / 2))
         L = sp.eye(self.N) - Dmh.dot(self.A).dot(Dmh)
         l, U = sp.linalg.eigsh(L, k=self.K, which='SM')
 

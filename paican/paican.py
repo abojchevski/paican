@@ -42,6 +42,7 @@ class PAICAN:
         assert A.diagonal().sum() == 0  # no self-loops
         assert (A != A.T).nnz == 0  # undirected
         assert np.all(np.unique(X.data) == [1])  # unweighted
+        assert (A.sum(1).A1 == 0).sum() == 0 # no singletons
 
         tf.reset_default_graph()
 
