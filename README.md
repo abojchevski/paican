@@ -1,5 +1,5 @@
 # Paican
-<img src="https://www.kdd.in.tum.de/fileadmin/w00bxq/www/paican/paican.png" width="700">
+<img src="https://www.in.tum.de/fileadmin/w00bws/daml/paican/paican.png" width="700">
 
 Tensorflow implementation of the method proposed in the paper: "Bayesian Robust Attributed Graph Clustering: Joint Learning of Partial Anomalies and Group Structure", Aleksandar Bojchevski and Stephan Günnemann, AAAI 2018.
 
