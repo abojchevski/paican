@@ -56,6 +56,8 @@ class PAICAN:
         sp_dot = tf.sparse_tensor_dense_matmul
         dot = tf.matmul
         eps = 1e-20
+        # add a small positive constant to the log to avoid numerical instability
+        safe_log = lambda x: tf.log(x + 1e-7)
 
         # input data and placeholders
         self.idx = tf.placeholder(tf.int32, shape=[None])
@@ -83,7 +85,7 @@ class PAICAN:
             z_init = dcsbm.z
         else:
             raise ValueError
-
+        
         self.z = tf.Variable(z_init, name='z', dtype=tf.float32)
 
         # initialize the anomaly indicators
@@ -119,19 +121,19 @@ class PAICAN:
         topics = tf.clip_by_value(sp_dot(tf.sparse_transpose(self.X), rx) / tf.reduce_sum(rx, 0), eps, 1 - eps)
 
         # MAP update of the cluster/anomaly priors
-        log_pi = tf.log((tf.reduce_sum((1 - self.c[:, 3][:, None]) * self.z, 0) + alpha) /
+        log_pi = safe_log((tf.reduce_sum((1 - self.c[:, 3][:, None]) * self.z, 0) + alpha) /
                         (tf.reduce_sum(1 - self.c[:, 3])) + tf.reduce_sum(alpha))
-        log_rho = tf.log((tf.reduce_sum(self.c, 0) + beta) / (tf.cast(self.N, tf.float32) + tf.reduce_sum(beta)))
+        log_rho = safe_log((tf.reduce_sum(self.c, 0) + beta) / (tf.cast(self.N, tf.float32) + tf.reduce_sum(beta)))
 
         # variational update of the cluster assignments z
         z_sbm = self.ca[:, 0][:, None] * (
             -theta * (1 - theta * self.ca[:, 0][:, None] * dot(self.z, eta))
             - 0.5 * theta ** 2 * tf.diag_part(eta)
-            + dot(sp_dot(self.A, zc), tf.log(eta))
-            + sp_dot(self.A, (self.ca[:, 0][:, None] * tf.log(theta)))
-            + sp_dot(self.A, self.ca[:, 0][:, None]) * tf.log(theta))
+            + dot(sp_dot(self.A, zc), safe_log(eta))
+            + sp_dot(self.A, (self.ca[:, 0][:, None] * safe_log(theta)))
+            + sp_dot(self.A, self.ca[:, 0][:, None]) * safe_log(theta))
 
-        x_log_topics = sp_dot(self.X, tf.log(topics)) + dot(self.Xm, tf.log(1 - topics))
+        x_log_topics = sp_dot(self.X, safe_log(topics)) + dot(self.Xm, safe_log(1 - topics))
         z_att = self.cx[:, 0][:, None] * x_log_topics
         z_prior = (1 - self.c[:, 3])[:, None] * log_pi
 
@@ -146,21 +148,21 @@ class PAICAN:
             + theta ** 2 * tf.diag_part(dot(dot(self.z, eta), tf.transpose(self.z)))[:, None] * self.ca[:, 0][:, None]
             - etabg * (thetap_B - self.ca[:, 1][:, None] * theta_p[:, None])
             - 0.5 * theta ** 2 * dot(self.z, tf.diag_part(eta)[:, None])
-            + sp_dot(self.A * dot(dot(self.z, tf.log(eta)), tf.transpose(self.z)), self.ca[:, 0][:, None])
-            + sp_dot(self.A, self.ca[:, 0][:, None] * tf.log(theta))
-            + sp_dot(self.A, self.ca[:, 0][:, None]) * tf.log(theta)
-            + sp_dot(self.A, (tf.log(theta_p * etabg) * self.ca[:, 1])[:, None]))
+            + sp_dot(self.A * dot(dot(self.z, safe_log(eta)), tf.transpose(self.z)), self.ca[:, 0][:, None])
+            + sp_dot(self.A, self.ca[:, 0][:, None] * safe_log(theta))
+            + sp_dot(self.A, self.ca[:, 0][:, None]) * safe_log(theta)
+            + sp_dot(self.A, (safe_log(theta_p * etabg) * self.ca[:, 1])[:, None]))
 
         corr_sbm = (
             - theta_p[:, None] * etabb * (thetap_B - theta_p[:, None] * self.ca[:, 1][:, None])
             - etabg * theta_p[:, None] * (g - self.ca[:, 0][:, None])
             - 0.5 * theta_p[:, None] ** 2 * etabb
-            + sp_dot(self.A, self.ca[:, 1][:, None] * tf.log(theta_p * etabb)[:, None])
-            + sp_dot(self.A, self.ca[:, 1][:, None]) * tf.log(theta_p[:, None])
-            + sp_dot(self.A, self.ca[:, 0][:, None]) * tf.log(theta_p[:, None] * etabg))
+            + sp_dot(self.A, self.ca[:, 1][:, None] * safe_log(theta_p * etabb)[:, None])
+            + sp_dot(self.A, self.ca[:, 1][:, None]) * safe_log(theta_p[:, None])
+            + sp_dot(self.A, self.ca[:, 0][:, None]) * safe_log(theta_p[:, None] * etabg))
 
         good_att = tf.reduce_sum(self.z * x_log_topics, 1)
-        corr_att = tf.cast(D, tf.float32) * tf.log(0.5)
+        corr_att = tf.cast(D, tf.float32) * safe_log(0.5)
 
         c_update = tf.squeeze(tf.stack([
             good_sbm + good_att[:, None] + log_rho[0],
@@ -176,22 +178,22 @@ class PAICAN:
 
         # ELBO
         logp_sbm = tf.squeeze(
-            0.5 * tf.reduce_sum(mkk * tf.log(eta) - (dkg * tf.transpose(dkg)) * eta)
-            + dot(tf.transpose(tf.log(theta)), theta * self.ca[:, 0][:, None])
-            + mbg * tf.log(etabg)
-            + 0.5 * mbb * tf.log(etabb)
+            0.5 * tf.reduce_sum(mkk * safe_log(eta) - (dkg * tf.transpose(dkg)) * eta)
+            + dot(tf.transpose(safe_log(theta)), theta * self.ca[:, 0][:, None])
+            + mbg * safe_log(etabg)
+            + 0.5 * mbb * safe_log(etabb)
             - 0.5 * DB * DB * etabb
             - DB * g * etabg
-            + dot(tf.transpose(tf.log(theta_p[:, None])), theta_p[:, None] * self.ca[:, 1][:, None])
+            + dot(tf.transpose(safe_log(theta_p[:, None])), theta_p[:, None] * self.ca[:, 1][:, None])
         )
 
         prior = tf.reduce_sum(dot(tf.transpose(self.z), 1 - self.c[:, 3][:, None]) * log_pi) \
                 + tf.reduce_sum(dot(self.c, log_rho[:, None]))
 
         logp_att = tf.reduce_sum(self.cx[:, 0][:, None] * self.z * x_log_topics) \
-                   + tf.reduce_sum(self.cx[:, 1]) * tf.cast(D, tf.float32) * tf.log(0.5)
+                   + tf.reduce_sum(self.cx[:, 1]) * tf.cast(D, tf.float32) * safe_log(0.5)
 
-        entropy = tf.reduce_sum(self.c * tf.log(self.c + eps)) + tf.reduce_sum(self.z * tf.log(self.z + eps))
+        entropy = tf.reduce_sum(self.c * safe_log(self.c)) + tf.reduce_sum(self.z * safe_log(self.z))
 
         logp = logp_sbm + logp_att + prior
         ELBO = logp - entropy
