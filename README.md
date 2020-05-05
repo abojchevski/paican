@@ -9,8 +9,15 @@ python setup.py install
 ```
 
 ## Requirements
-* tensorflow (>=1.4)
+* tensorflow (>=1.4, <=2.0)
 * sklearn (only for evaluation)
+
+Note: If you are using tensorflow >=2.0 you can stull run the above code by replacing the tensorflow import with
+```
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+```
+and changing `tf.contrib.distributions` to `tf.distributions`. 
 
 ## Data
 Each of the dataset folders consists of the following files:
