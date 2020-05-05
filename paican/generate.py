@@ -79,7 +79,6 @@ def generate_corrupted(num_nodes, num_features, num_clusters, alpha=2.0, ratio=0
         # split the edges into intra-cluster and inter-cluster edges
         split_point = int(np.ceil((len(q_repeats) * ratio) / 2.) * 2)
         intra, inter = q_repeats[:split_point], q_repeats[split_point:]
-        print(intra.shape[0]/(intra.shape[0]+inter.shape[0]))
 
         # split every edge into two end-points (left and right)
         left, right = np.array_split(intra, 2)
